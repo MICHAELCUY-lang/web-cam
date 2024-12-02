@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auto Upload Photo from Camera</title>
+</head>
+<body>
+    <h1>Auto Upload Photo from Camera</h1>
+
+    <!-- Video preview untuk kamera -->
+    <video id="video" width="320" height="240" autoplay></video>
+
+    <p id="statusMessage">Initializing camera...</p>
+
+    <p id="countdown">5</p>
+
+    <script>
+
+        let timeLeft = 5;
+        const countdownElement = document.getElementById("countdown");
+
+        const countdownInterval = setInterval(() => {
+          timeLeft--;
+          countdownElement.textContent = timeLeft;
+        
+        if (timeLeft <= 0) {
+          timeLeft = 5;
+        }
+      },1000);
+
+        const video = document.getElementById("video");
+        const statusMessage = document.getElementById("statusMessage");
+
+        // Akses kamera dan tampilkan video di elemen <video>
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => {
+                video.srcObject = stream;
+                startAutoCapture();
+            })
+            .catch(error => {
+                console.error("Camera access denied:", error);
+                statusMessage.textContent = "Camera access denied.";
+            });
+
+        // Fungsi untuk mengambil foto dari video dan meng-upload ke server
+        function captureAndUploadPhoto() {
+            // Membuat canvas sementara untuk mengambil snapshot dari video
+            const canvas = document.createElement("canvas");
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const context = canvas.getContext("2d");
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // Konversi gambar ke base64
+            const imageData = canvas.toDataURL("image/jpeg");
+
+            // Mengirim data gambar ke server
+            fetch("upload.php", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ image: imageData })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    console.log("Photo uploaded successfully!");
+                } else {
+                    console.error("Error uploading photo:", data.message);
+                }
+            })
+            .catch(error => {
+                console.error("Error:", error);
+            });
+        }
+
+        // Fungsi untuk mengambil foto setiap 5 detik
+        function startAutoCapture() {
+            setInterval(captureAndUploadPhoto, 5000); // 5000 ms = 5 detik
+        }
+    </script>
+</body>
+</html>
